@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hotel Financial Reporting</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+*{box-sizing:border-box}
+:root{--blue:#2563eb;--blue2:#1d4ed8;--green:#16a34a;--red:#dc2626;--text:#172033;--muted:#64748b;--border:#e5e7eb;--bg:#f6f8fb;--card:#fff}
+body{margin:0;background:var(--bg);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.header{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid var(--border);padding:20px 32px;display:flex;justify-content:space-between;align-items:center;gap:20px}
+.header h1{font-size:24px;margin:0 0 4px}.header p{margin:0;color:var(--muted);font-size:13px}
+.status{font-size:12px;font-weight:700;color:#166534;background:#dcfce7;padding:8px 12px;border-radius:999px;white-space:nowrap}
+.container{max-width:1500px;margin:auto;padding:26px 32px 50px}
+.toolbar,.card,.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:0 3px 12px rgba(15,23,42,.035)}
+.toolbar{padding:16px;display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-bottom:18px}
+.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+input,select{border:1px solid #d8dee8;background:#fff;border-radius:9px;padding:9px 11px;outline:none}
+input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.quick{display:flex;gap:7px;flex-wrap:wrap}.btn{border:1px solid #dbe2ea;background:#fff;padding:9px 12px;border-radius:9px;font-weight:700;font-size:13px}.btn:hover{border-color:#93b4ff}.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}.btn.green{background:#15803d;color:#fff;border-color:#15803d}
+.spacer{flex:1}
+.meta{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:8px 0 18px;color:var(--muted);font-size:13px}
+.live{display:inline-flex;align-items:center;gap:7px;font-weight:700;color:#334155}.dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px #dcfce7}
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px}
+.card{padding:18px}.label{font-size:12px;color:var(--muted);font-weight:700}.value{font-size:25px;font-weight:800;margin-top:8px;letter-spacing:-.02em}.sub{font-size:11px;color:var(--muted);margin-top:6px}.positive{color:var(--green)}.negative{color:var(--red)}
+.grid2{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:18px}.grid3{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:18px;margin-bottom:18px}
+.panel{padding:18px;min-width:0}.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.panel h2{font-size:15px;margin:0}.panel small{color:var(--muted)}
+.chartbox{height:330px;position:relative}.chartbox.small{height:285px}
+.table-wrap{overflow:auto;border:1px solid var(--border);border-radius:10px}.search{max-width:260px}
+table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:11px 12px;border-bottom:1px solid #eef1f5;text-align:right;white-space:nowrap}th{background:#f8fafc;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.04em}th:first-child,td:first-child{text-align:left}tr:last-child td{border-bottom:0}tbody tr:hover{background:#f8fbff}tbody tr.clickable{cursor:pointer}
+.breakdown{display:grid;gap:10px}.row{display:grid;grid-template-columns:1fr 90px 60px;gap:10px;align-items:center;font-size:12px}.bar{height:7px;background:#edf2f7;border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:var(--blue);border-radius:99px}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.summary .mini{padding:12px;border:1px solid var(--border);border-radius:10px;background:#fafbfc}.mini b{display:block;margin-top:4px}
+.note{padding:11px 13px;background:#f8fafc;border:1px solid var(--border);border-radius:9px;color:#475569;font-size:12px;margin-bottom:14px}
+.modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,.48);z-index:30;align-items:center;justify-content:center;padding:20px}.modal.show{display:flex}.modal-box{background:#fff;border-radius:16px;width:min(850px,100%);max-height:90vh;overflow:auto;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.2)}.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.close{border:0;background:#f1f5f9;width:34px;height:34px;border-radius:50%;font-size:18px}
+.detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.detail{border:1px solid var(--border);padding:13px;border-radius:10px}.detail span{font-size:11px;color:var(--muted)}.detail b{display:block;font-size:17px;margin-top:5px}
+.toast{position:fixed;right:20px;bottom:20px;background:#172033;color:#fff;padding:12px 15px;border-radius:10px;font-size:12px;opacity:0;transform:translateY(12px);pointer-events:none;transition:.25s;z-index:50}.toast.show{opacity:1;transform:none}
+.empty{text-align:center;padding:35px;color:var(--muted)}
+@media(max-width:1100px){.cards{grid-template-columns:repeat(3,1fr)}.grid2,.grid3{grid-template-columns:1fr}}
+@media(max-width:700px){.header{padding:16px;align-items:flex-start;flex-direction:column}.container{padding:18px 14px 40px}.cards{grid-template-columns:1fr 1fr}.summary,.detail-grid{grid-template-columns:1fr}.toolbar{align-items:stretch}.spacer{display:none}}
+@media print{.header{position:static}.toolbar,.btn,.search,.status{display:none!important}.container{padding:0}.panel,.card{box-shadow:none}.modal{display:none!important}}
+</style>
+</head>
+<body>
+<header class="header">
+  <div><h1>Hotel Financial Reporting</h1><p>Monitor hotel revenue, expenses, profitability, and financial performance.</p></div>
+  <div class="status">Reporting Period: <span id="statusPeriod">September 15–28, 2026</span></div>
+</header>
+
+<main class="container" id="reportArea">
+  <section class="toolbar">
+    <div class="field"><label>Quick Filter</label><div class="quick">
+      <button class="btn" data-days="1">Today</button><button class="btn" data-days="3">3 Days</button><button class="btn" data-days="7">7 Days</button><button class="btn" data-days="14">14 Days</button>
+    </div></div>
+    <div class="field"><label>Start Date</label><input id="startDate" type="date"></div>
+    <div class="field"><label>End Date</label><input id="endDate" type="date"></div>
+    <button class="btn primary" id="apply">Apply Filter</button>
+    <div class="spacer"></div>
+    <div class="field"><label>Report Type</label><select id="reportType"><option value="daily">Daily Report</option><option value="period">Period Summary</option></select></div>
+    <button class="btn green" id="excel">Export Excel</button>
+    <button class="btn" id="print">Print</button>
+    <button class="btn" id="pdf">PDF</button>
+  </section>
+
+  <div class="meta">
+    <div class="live"><span class="dot"></span> Live dashboard — recalculated from JSON data</div>
+    <div id="filterNote">Showing 14 days of available financial data.</div>
+  </div>
+
+  <section class="cards">
+    <div class="card"><div class="label">TOTAL REVENUE</div><div class="value" id="totalRevenue">₱0</div><div class="sub">Across selected period</div></div>
+    <div class="card"><div class="label">OPERATING EXPENSES</div><div class="value" id="totalExpenses">₱0</div><div class="sub">Selected period</div></div>
+    <div class="card"><div class="label">NET OPERATING INCOME</div><div class="value" id="netIncome">₱0</div><div class="sub" id="marginSub">Operating margin: 0%</div></div>
+    <div class="card"><div class="label">AVERAGE DAILY REVENUE</div><div class="value" id="avgRevenue">₱0</div><div class="sub">Per selected day</div></div>
+    <div class="card"><div class="label">AVERAGE OCCUPANCY</div><div class="value" id="avgOccupancy">0%</div><div class="sub">Selected period average</div></div>
+  </section>
+
+  <section class="grid2">
+    <div class="panel"><div class="panel-head"><h2>Revenue & Expense Trend</h2><small id="trendCaption">14 selected days</small></div><div class="chartbox"><canvas id="trendChart"></canvas></div></div>
+    <div class="panel"><div class="panel-head"><h2>Revenue Composition</h2><small>Dynamic by filter</small></div><div class="chartbox small"><canvas id="compositionChart"></canvas></div></div>
+  </section>
+
+  <section class="grid3">
+    <div class="panel"><div class="panel-head"><h2>Daily Total Revenue</h2><small>Selected dates only</small></div><div class="chartbox small"><canvas id="dailyChart"></canvas></div></div>
+    <div class="panel"><div class="panel-head"><h2>Revenue Breakdown</h2><small>Current range</small></div><div id="revenueBreakdown" class="breakdown"></div></div>
+    <div class="panel"><div class="panel-head"><h2>Expense Overview</h2><small>Dynamic allocation</small></div><div id="expenseBreakdown" class="breakdown"></div></div>
+  </section>
+
+  <section class="panel" style="margin-bottom:18px">
+    <div class="panel-head"><h2 id="reportTitle">Daily Financial Report</h2><input class="search" id="search" placeholder="Search date..."></div>
+    <div class="note" id="reportDescription">Click any date to open the full Daily Financial Report.</div>
+    <div class="table-wrap"><table><thead id="tableHead"></thead><tbody id="reportTable"></tbody></table></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Report Summary</h2><small>Automatically recalculated</small></div>
+    <div class="summary" id="summary"></div>
+  </section>
+</main>
+
+<div class="modal" id="modal"><div class="modal-box"><div class="modal-head"><h2 id="modalTitle">Daily Financial Report</h2><button class="close" id="close">×</button></div><div id="modalContent"></div></div></div>
+<div class="toast" id="toast"></div>
+
+<!-- The complete source dataset is intentionally kept in JSON so the dashboard has one dynamic source of truth. -->
+<script id="financialData" type="application/json">
+[
+  {
+    "date": "2026-09-15",
+    "roomRevenue": 28500,
+    "foodRevenue": 9200,
+    "serviceRevenue": 4100,
+    "otherRevenue": 1800,
+    "operatingExpenses": 21500,
+    "occupancyRate": 68
+  },
+  {
+    "date": "2026-09-16",
+    "roomRevenue": 31200,
+    "foodRevenue": 10100,
+    "serviceRevenue": 4600,
+    "otherRevenue": 2100,
+    "operatingExpenses": 22800,
+    "occupancyRate": 72
+  },
+  {
+    "date": "2026-09-17",
+    "roomRevenue": 29800,
+    "foodRevenue": 9800,
+    "serviceRevenue": 4300,
+    "otherRevenue": 1950,
+    "operatingExpenses": 22100,
+    "occupancyRate": 70
+  },
+  {
+    "date": "2026-09-18",
+    "roomRevenue": 35600,
+    "foodRevenue": 11900,
+    "serviceRevenue": 5200,
+    "otherRevenue": 2400,
+    "operatingExpenses": 24700,
+    "occupancyRate": 79
+  },
+  {
+    "date": "2026-09-19",
+    "roomRevenue": 38200,
+    "foodRevenue": 13200,
+    "serviceRevenue": 5700,
+    "otherRevenue": 2700,
+    "operatingExpenses": 26300,
+    "occupancyRate": 84
+  },
+  {
+    "date": "2026-09-20",
+    "roomRevenue": 40100,
+    "foodRevenue": 13900,
+    "serviceRevenue": 6100,
+    "otherRevenue": 2850,
+    "operatingExpenses": 27400,
+    "occupancyRate": 87
+  },
+  {
+    "date": "2026-09-21",
+    "roomRevenue": 32700,
+    "foodRevenue": 10800,
+    "serviceRevenue": 4800,
+    "otherRevenue": 2200,
+    "operatingExpenses": 23500,
+    "occupancyRate": 75
+  },
+  {
+    "date": "2026-09-22",
+    "roomRevenue": 30400,
+    "foodRevenue": 9700,
+    "serviceRevenue": 4450,
+    "otherRevenue": 2050,
+    "operatingExpenses": 22600,
+    "occupancyRate": 71
+  },
+  {
+    "date": "2026-09-23",
+    "roomRevenue": 31900,
+    "foodRevenue": 10400,
+    "serviceRevenue": 4700,
+    "otherRevenue": 2150,
+    "operatingExpenses": 23100,
+    "occupancyRate": 73
+  },
+  {
+    "date": "2026-09-24",
+    "roomRevenue": 34800,
+    "foodRevenue": 11600,
+    "serviceRevenue": 5100,
+    "otherRevenue": 2350,
+    "operatingExpenses": 24200,
+    "occupancyRate": 78
+  },
+  {
+    "date": "2026-09-25",
+    "roomRevenue": 37100,
+    "foodRevenue": 12500,
+    "serviceRevenue": 5500,
+    "otherRevenue": 2550,
+    "operatingExpenses": 25600,
+    "occupancyRate": 82
+  },
+  {
+    "date": "2026-09-26",
+    "roomRevenue": 42500,
+    "foodRevenue": 14800,
+    "serviceRevenue": 6500,
+    "otherRevenue": 3100,
+    "operatingExpenses": 28800,
+    "occupancyRate": 91
+  },
+  {
+    "date": "2026-09-27",
+    "roomRevenue": 44800,
+    "foodRevenue": 15600,
+    "serviceRevenue": 6900,
+    "otherRevenue": 3250,
+    "operatingExpenses": 30100,
+    "occupancyRate": 94
+  },
+  {
+    "date": "2026-09-28",
+    "roomRevenue": 39600,
+    "foodRevenue": 13700,
+    "serviceRevenue": 6000,
+    "otherRevenue": 2900,
+    "operatingExpenses": 27200,
+    "occupancyRate": 88
+  }
+]
+</script>
+
+<script>
+const DATA = JSON.parse(document.getElementById('financialData').textContent);
+const EXPENSE_RATIOS = {"Salaries & Wages": 0.42, "Utilities": 0.16, "Maintenance": 0.12, "Supplies": 0.1, "Marketing": 0.08, "Other Operating Expenses": 0.12};
+const MIN_DATE = DATA[0].date, MAX_DATE = DATA[DATA.length-1].date;
+let filtered = [...DATA];
+let trendChart, compositionChart, dailyChart;
+
+const $ = id => document.getElementById(id);
+const money = n => '₱' + Math.round(n).toLocaleString('en-PH');
+const pct = n => `${Number(n).toFixed(1)}%`;
+const formatDate = s => new Date(s+'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});
+const shortDate = s => new Date(s+'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric'});
+const totalRevenue = d => d.roomRevenue+d.foodRevenue+d.serviceRevenue+d.otherRevenue;
+const totalExpenses = d => d.operatingExpenses;
+const netIncome = d => totalRevenue(d)-totalExpenses(d);
+
+function aggregate(data){
+  const revenue = data.reduce((a,d)=>a+totalRevenue(d),0);
+  const expenses = data.reduce((a,d)=>a+d.operatingExpenses,0);
+  return {
+    revenue, expenses, net: revenue-expenses,
+    avgRevenue:data.length ? revenue/data.length : 0,
+    avgOccupancy:data.length ? data.reduce((a,d)=>a+d.occupancyRate,0)/data.length : 0,
+    room:data.reduce((a,d)=>a+d.roomRevenue,0),
+    food:data.reduce((a,d)=>a+d.foodRevenue,0),
+    service:data.reduce((a,d)=>a+d.serviceRevenue,0),
+    other:data.reduce((a,d)=>a+d.otherRevenue,0)
+  };
+}
+function filterFinancialData(){
+  const s=$('startDate').value, e=$('endDate').value;
+  return DATA.filter(d=>d.date>=s && d.date<=e);
+}
+function setRange(days){
+  const end=MAX_DATE;
+  const idx=Math.max(0,DATA.length-days);
+  $('startDate').value=DATA[idx].date;
+  $('endDate').value=end;
+  updateDashboard();
+}
+function updateCards(){
+  const a=aggregate(filtered), margin=a.revenue ? a.net/a.revenue*100 : 0;
+  $('totalRevenue').textContent=money(a.revenue);
+  $('totalExpenses').textContent=money(a.expenses);
+  $('netIncome').textContent=money(a.net);
+  $('netIncome').className='value '+(a.net>=0?'positive':'negative');
+  $('avgRevenue').textContent=money(a.avgRevenue);
+  $('avgOccupancy').textContent=pct(a.avgOccupancy);
+  $('marginSub').textContent='Operating margin: '+pct(margin);
+}
+function breakdownHTML(items,total){
+  if(!total) return '<div class="empty">No data in selected range.</div>';
+  return items.map(x=>`<div class="row"><span>${x.name}</span><div class="bar"><i style="width:${Math.min(100,x.pct)}%"></i></div><b>${x.pct.toFixed(1)}%</b></div>`).join('');
+}
+function updateBreakdowns(){
+  const a=aggregate(filtered);
+  const revItems=[
+    {name:'Room Revenue',value:a.room},{name:'Food & Beverage',value:a.food},
+    {name:'Service Revenue',value:a.service},{name:'Other Revenue',value:a.other}
+  ].map(x=>({...x,pct:a.revenue?x.value/a.revenue*100:0}));
+  $('revenueBreakdown').innerHTML=breakdownHTML(revItems,a.revenue);
+  const expItems=Object.entries(EXPENSE_RATIOS).map(([name,r])=>({name,value:a.expenses*r,pct:r*100}));
+  $('expenseBreakdown').innerHTML=breakdownHTML(expItems,a.expenses);
+}
+function destroyCharts(){[trendChart,compositionChart,dailyChart].forEach(c=>{if(c)c.destroy()})}
+function updateCharts(){
+  destroyCharts();
+  const a=aggregate(filtered);
+  const labels=filtered.map(d=>shortDate(d.date));
+  const common={responsive:true,maintainAspectRatio:false,animation:{duration:500},plugins:{legend:{position:'bottom',labels:{boxWidth:12,usePointStyle:true}}}};
+  trendChart=new Chart($('trendChart'),{type:'line',data:{labels,datasets:[
+    {label:'Total Revenue',data:filtered.map(totalRevenue),borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',fill:true,tension:.35,borderWidth:2.5},
+    {label:'Operating Expenses',data:filtered.map(d=>d.operatingExpenses),borderColor:'#f59e0b',backgroundColor:'transparent',tension:.35,borderWidth:2},
+    {label:'Net Operating Income',data:filtered.map(netIncome),borderColor:'#16a34a',backgroundColor:'transparent',tension:.35,borderWidth:2}
+  ]},options:{...common,scales:{y:{beginAtZero:true,ticks:{callback:v=>'₱'+(v/1000)+'k'},grid:{color:'#eef2f7'}},x:{grid:{display:false}}}}});
+  compositionChart=new Chart($('compositionChart'),{type:'doughnut',data:{labels:['Room','Food & Beverage','Service','Other'],datasets:[{data:[a.room,a.food,a.service,a.other],backgroundColor:['#2563eb','#10b981','#f59e0b','#94a3b8'],borderWidth:3,borderColor:'#fff'}]},options:{...common,cutout:'66%',plugins:{...common.plugins,legend:{position:'bottom'}}}});
+  dailyChart=new Chart($('dailyChart'),{type:'bar',data:{labels,datasets:[{label:'Total Revenue',data:filtered.map(totalRevenue),backgroundColor:'#2563eb',borderRadius:5}]},options:{...common,plugins:{...common.plugins,legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:v=>'₱'+(v/1000)+'k'},grid:{color:'#eef2f7'}},x:{grid:{display:false}}}}});
+}
+function updateReportTable(){
+  const type=$('reportType').value;
+  const query=$('search').value.trim().toLowerCase();
+  if(type==='period'){
+    $('reportTitle').textContent='Period Financial Summary';
+    $('reportDescription').textContent='This is a summary of the available selected period; it is not a full calendar-month report.';
+    $('tableHead').innerHTML='<tr><th>Metric</th><th>Amount / Value</th><th>Share / Detail</th></tr>';
+    const a=aggregate(filtered);
+    const rows=[
+      ['Total Revenue',money(a.revenue), '100%'],
+      ['Room Revenue',money(a.room),a.revenue?pct(a.room/a.revenue*100):'0%'],
+      ['Food & Beverage',money(a.food),a.revenue?pct(a.food/a.revenue*100):'0%'],
+      ['Service Revenue',money(a.service),a.revenue?pct(a.service/a.revenue*100):'0%'],
+      ['Other Revenue',money(a.other),a.revenue?pct(a.other/a.revenue*100):'0%'],
+      ['Operating Expenses',money(a.expenses),a.revenue?pct(a.expenses/a.revenue*100):'0%'],
+      ['Net Operating Income',money(a.net),a.revenue?pct(a.net/a.revenue*100):'0%'],
+      ['Average Occupancy',pct(a.avgOccupancy),'Period average']
+    ];
+    $('reportTable').innerHTML=rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
+    return;
+  }
+  $('reportTitle').textContent='Daily Financial Report';
+  $('reportDescription').textContent='Click any date to open the full Daily Financial Report.';
+  $('tableHead').innerHTML='<tr><th>Date</th><th>Room Revenue</th><th>F&B Revenue</th><th>Service Revenue</th><th>Other Revenue</th><th>Total Revenue</th><th>Expenses</th><th>Net Income</th></tr>';
+  const rows=filtered.filter(d=>formatDate(d.date).toLowerCase().includes(query)||d.date.includes(query));
+  $('reportTable').innerHTML=rows.length?rows.map(d=>{
+    const rev=totalRevenue(d), net=netIncome(d);
+    return `<tr class="clickable" data-date="${d.date}"><td>${formatDate(d.date)}</td><td>${money(d.roomRevenue)}</td><td>${money(d.foodRevenue)}</td><td>${money(d.serviceRevenue)}</td><td>${money(d.otherRevenue)}</td><td>${money(rev)}</td><td>${money(d.operatingExpenses)}</td><td class="${net>=0?'positive':'negative'}">${money(net)}</td></tr>`;
+  }).join(''):'<tr><td colspan="8" class="empty">No matching dates.</td></tr>';
+  document.querySelectorAll('#reportTable tr[data-date]').forEach(tr=>tr.addEventListener('click',()=>openDaily(tr.dataset.date)));
+}
+function updateSummary(){
+  const a=aggregate(filtered), margin=a.revenue?a.net/a.revenue*100:0;
+  $('summary').innerHTML=`
+    <div class="mini"><span>Selected Dates</span><b>${filtered.length} day${filtered.length===1?'':'s'}</b></div>
+    <div class="mini"><span>Revenue per Selected Day</span><b>${money(a.avgRevenue)}</b></div>
+    <div class="mini"><span>Operating Margin</span><b class="${a.net>=0?'positive':'negative'}">${pct(margin)}</b></div>
+    <div class="mini"><span>Revenue from Rooms</span><b>${money(a.room)}</b></div>
+    <div class="mini"><span>Average Occupancy</span><b>${pct(a.avgOccupancy)}</b></div>
+    <div class="mini"><span>Net Operating Income</span><b class="${a.net>=0?'positive':'negative'}">${money(a.net)}</b></div>`;
+}
+function updateDashboard(){
+  filtered=filterFinancialData();
+  if(!filtered.length){$('filterNote').textContent='No financial data exists for the selected range.';return}
+  const first=filtered[0].date,last=filtered[filtered.length-1].date;
+  $('statusPeriod').textContent=`${formatDate(first)} – ${formatDate(last)}`;
+  $('filterNote').textContent=`Showing ${filtered.length} of ${DATA.length} available JSON records.`;
+  $('trendCaption').textContent=`${filtered.length} selected day${filtered.length===1?'':'s'}`;
+  updateCards();updateBreakdowns();updateCharts();updateReportTable();updateSummary();
+}
+function openDaily(date){
+  const d=DATA.find(x=>x.date===date);if(!d)return;
+  const rev=totalRevenue(d), net=netIncome(d);
+  $('modalTitle').textContent=`Daily Financial Report — ${formatDate(date)}`;
+  $('modalContent').innerHTML=`<div class="detail-grid">
+    <div class="detail"><span>Room Revenue</span><b>${money(d.roomRevenue)}</b></div>
+    <div class="detail"><span>Food & Beverage</span><b>${money(d.foodRevenue)}</b></div>
+    <div class="detail"><span>Service Revenue</span><b>${money(d.serviceRevenue)}</b></div>
+    <div class="detail"><span>Other Revenue</span><b>${money(d.otherRevenue)}</b></div>
+    <div class="detail"><span>Total Revenue</span><b>${money(rev)}</b></div>
+    <div class="detail"><span>Operating Expenses</span><b>${money(d.operatingExpenses)}</b></div>
+    <div class="detail"><span>Net Operating Income</span><b class="${net>=0?'positive':'negative'}">${money(net)}</b></div>
+    <div class="detail"><span>Occupancy Rate</span><b>${pct(d.occupancyRate)}</b></div>
+    <div class="detail"><span>Operating Margin</span><b>${pct(rev?net/rev*100:0)}</b></div>
+  </div>`;
+  $('modal').classList.add('show');
+}
+function toast(msg){$('toast').textContent=msg;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2200)}
+function exportExcel(){
+  const a=aggregate(filtered);
+  const wb=XLSX.utils.book_new();
+  const summary=[['Hotel Financial Reporting'],['Reporting Period',`${formatDate(filtered[0].date)} - ${formatDate(filtered[filtered.length-1].date)}`],[],['Metric','Value'],['Total Revenue',a.revenue],['Operating Expenses',a.expenses],['Net Operating Income',a.net],['Average Daily Revenue',a.avgRevenue],['Average Occupancy',a.avgOccupancy/100]];
+  const daily=[['Date','Room Revenue','F&B Revenue','Service Revenue','Other Revenue','Total Revenue','Expenses','Net Income','Occupancy Rate'],...filtered.map(d=>[d.date,d.roomRevenue,d.foodRevenue,d.serviceRevenue,d.otherRevenue,totalRevenue(d),d.operatingExpenses,netIncome(d),d.occupancyRate/100])];
+  const rev=[['Revenue Category','Amount','Percentage'],['Room Revenue',a.room,a.revenue?a.room/a.revenue:0],['Food & Beverage',a.food,a.revenue?a.food/a.revenue:0],['Service Revenue',a.service,a.revenue?a.service/a.revenue:0],['Other Revenue',a.other,a.revenue?a.other/a.revenue:0]];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(summary),'Financial Summary');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(daily),'Daily Financial Data');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rev),'Revenue Breakdown');
+  XLSX.writeFile(wb,'hotel-financial-report.xlsx');toast('Excel report exported.');
+}
+$('startDate').value=MIN_DATE;$('endDate').value=MAX_DATE;
+document.querySelectorAll('[data-days]').forEach(b=>b.addEventListener('click',()=>setRange(Number(b.dataset.days))));
+$('apply').addEventListener('click',updateDashboard);
+$('startDate').addEventListener('change',updateDashboard);
+$('endDate').addEventListener('change',updateDashboard);
+$('reportType').addEventListener('change',updateReportTable);
+$('search').addEventListener('input',updateReportTable);
+$('close').addEventListener('click',()=>$('modal').classList.remove('show'));
+$('modal').addEventListener('click',e=>{if(e.target.id==='modal')$('modal').classList.remove('show')});
+$('print').addEventListener('click',()=>window.print());
+$('excel').addEventListener('click',exportExcel);
+$('pdf').addEventListener('click',async()=>{
+  toast('Generating PDF...');
+  const canvas=await html2canvas($('reportArea'),{scale:1.5,backgroundColor:'#f6f8fb'});
+  const {jsPDF}=window.jspdf;const pdf=new jsPDF('l','mm','a4');const w=277,h=canvas.height*w/canvas.width;
+  pdf.addImage(canvas.toDataURL('image/png'),'PNG',10,10,w,Math.min(h,190));pdf.save('hotel-financial-report.pdf');toast('PDF exported.');
+});
+updateDashboard();
+</script>
+</body>
+</html>
